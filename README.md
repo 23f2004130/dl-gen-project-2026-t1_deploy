@@ -1,16 +1,3 @@
----
-
-title: Music Genre Classifier
-emoji: 🎵
-colorFrom: blue
-colorTo: purple
-sdk: streamlit
-sdk_version: "1.33.0"
-python_version: "3.10"
-app_file: app.py
-pinned: false
--------------
-
 # Music Genre Classification (Deep Learning)
 
 A production-ready music genre classification system built using deep learning on Mel Spectrogram representations. The model processes raw audio files, converts them into log-Mel spectrograms, and predicts the most likely genre.
