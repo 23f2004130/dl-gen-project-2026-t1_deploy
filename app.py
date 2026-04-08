@@ -1,7 +1,8 @@
 import streamlit as st
 import torch
+import torch.nn as nn
+import torchvision.models as models
 from inference import predict_file
-from model import YourModelClass
 import os
 from urllib.request import urlretrieve
 
@@ -9,8 +10,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 @st.cache_resource
 def load_model():
-    model = YourModelClass()
-    
     MODEL_URL = "https://huggingface.co/Uniqueorbi/Efficient-net-b5/resolve/main/efficientb5.pth"
     MODEL_PATH = "efficientb5.pth"
 
@@ -18,8 +17,14 @@ def load_model():
         with st.spinner("Downloading model weights... This only happens once."):
             urlretrieve(MODEL_URL, MODEL_PATH)
 
-    # Loading the available model file
-    model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+    # 1. Define Architecture
+    model = models.efficientnet_b5(weights="IMAGENET1K_V1")
+    model.classifier[1] = nn.Linear(model.classifier[1].in_features, 10)
+
+    # 2. Load Weights (state_dict) into it
+    state_dict = torch.load(MODEL_PATH, map_location=device, weights_only=True)
+    model.load_state_dict(state_dict)
+    
     model.to(device)
     model.eval()
     return model
