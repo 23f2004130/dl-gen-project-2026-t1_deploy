@@ -10,10 +10,10 @@ def predict_file(path, model, device):
     """
     Process the audio file and return the predicted genre.
     """
-    y, _ = librosa.load(path, sr=32000, mono=True)
+    y, _ = librosa.load(path, sr=22050, mono=True)
 
-    stride = 32000 * 2
-    clip_sample = 32000 * 5
+    stride = 22050 * 2
+    clip_sample = 22050 * 4
 
     logits_list = []
 
@@ -23,22 +23,25 @@ def predict_file(path, model, device):
         if len(clip) < clip_sample:
             clip = np.pad(clip, (0, clip_sample - len(clip)))
 
+        # Normalize waveform just like the training dataset does
+        clip = clip / (np.max(np.abs(clip)) + 1e-6)
+
         # Extracted Hardcoded globals as per instructions, local directly inside function
         mel = librosa.feature.melspectrogram(
             y=clip,
-            sr=32000,
-            n_fft=1024,
+            sr=22050,
+            n_fft=2048,
             hop_length=512,
             n_mels=128
         )
 
         logmel = librosa.power_to_db(mel, ref=np.max)
-        logmel = (logmel - logmel.mean()) / (logmel.std() + 1e-6)
-
+        
         logmel = np.stack([logmel]*3, axis=0) # Make it 3 channel
         logmel = torch.tensor(logmel, dtype=torch.float32)
 
         logmel = T.Resize((456,456))(logmel)
+        logmel = (logmel - logmel.mean()) / (logmel.std() + 1e-6)
         logmel = logmel.unsqueeze(0).to(device)
 
         with torch.no_grad():
@@ -48,6 +51,8 @@ def predict_file(path, model, device):
     if len(logits_list) == 0:
         return "Unknown - Audio too short"
 
+    avg_logits = torch.mean(torch.stack(logits_list), dim=0)
+    
     # Adding Top-3 predictions and confidence scores
     probs = torch.nn.functional.softmax(avg_logits, dim=1)[0]
     top3_prob, top3_idx = torch.topk(probs, 3)
